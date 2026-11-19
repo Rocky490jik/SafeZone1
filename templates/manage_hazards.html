@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Hazard zones - SafeZone Admin{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Manage hazard zones</h2>
+    <p class="text-muted text-center mb-4">
+      Draw hazard polygons on the map and paste the GeoJSON below. Coordinates are [longitude, latitude].
+    </p>
+
+    <div class="row g-4">
+      <!-- Map for drawing -->
+      <div class="col-lg-6">
+        <div class="card card-sz">
+          <div class="card-header">Draw hazard polygon</div>
+          <div class="card-body p-0" style="height:420px;">
+            <div id="hazardMap"></div>
+          </div>
+          <div class="card-footer small text-muted">
+            Click on the map to draw a polygon. Double-click to finish. Then copy the GeoJSON into the form.
+          </div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <div class="col-lg-6">
+        <div class="card card-sz">
+          <div class="card-header">
+            <h5 class="mb-0">Add / edit hazard zone</h5>
+          </div>
+          <div class="card-body p-4">
+            <form method="POST" action="{{ url_for('admin.add_hazard_zone') }}" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <div class="mb-3">
+                <label class="form-label">Zone name *</label>
+                <input type="text" name="zone_name" class="form-control" required placeholder="e.g. Flood zone A - Central">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="2" placeholder="Fictional polygon for testing..."></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Linked disaster</label>
+                <select name="disaster_id" class="form-select">
+                  <option value="">None</option>
+                  {% for d in disasters %}
+                    <option value="{{ d.disaster_id }}">{{ d.event_code }} &mdash; {{ d.title }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">GeoJSON (Polygon/MultiPolygon) *</label>
+                <textarea name="polygon_geojson" id="geojsonInput" class="form-control monospace" rows="6" required placeholder='{"type":"Polygon","coordinates":[[[77.59,12.97],...]]}'></textarea>
+                <div class="form-text small">Paste GeoJSON coordinates in [longitude, latitude] order.</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Severity</label>
+                <select name="severity" class="form-select">
+                  <option>LOW</option><option>MODERATE</option><option>HIGH</option><option>CRITICAL</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Zone status</label>
+                <select name="zone_status" class="form-select">
+                  <option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Source name</label>
+                <input type="text" name="source_name" class="form-control" value="ADMIN">
+              </div>
+              <div class="d-grid gap-2 d-sm-flex justify-content-end mt-3">
+                <a class="btn btn-ghost" href="{{ url_for('admin.manage_hazards') }}">Cancel</a>
+                <button class="btn btn-sz" type="submit">Save hazard zone</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="mt-4 card card-sz">
+          <div class="card-header">Existing hazard zones</div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table-sz mb-0">
+                <thead>
+                  <tr><th>Zone</th><th>Severity</th><th>Status</th><th>Disaster</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {% for z in zones %}
+                    <tr>
+                      <td><strong>{{ z.zone_name }}</strong><br><small class="text-muted">{{ z.description }}</small></td>
+                      <td><span class="badge badge-{{ z.severity.lower() }}">{{ z.severity }}</span></td>
+                      <td><span class="badge badge-{{ 'open' if z.zone_status=='ACTIVE' else 'closed' }}">{{ z.zone_status }}</span></td>
+                      <td class="small text-muted">{{ z.disaster_id or 'None' }}</td>
+                      <td>
+                        <form method="POST" action="{{ url_for('admin.edit_hazard_zone', hazard_zone_id=z.hazard_zone_id) }}" style="display:inline;">
+                          <input type="hidden" name="zone_name" value="{{ z.zone_name }}">
+                          <input type="hidden" name="description" value="{{ z.description }}">
+                          <input type="hidden" name="disaster_id" value="{{ z.disaster_id or '' }}">
+                          <input type="hidden" name="polygon_geojson" value="{{ z.polygon_geojson }}">
+                          <input type="hidden" name="severity" value="{{ z.severity }}">
+                          <input type="hidden" name="zone_status" value="{{ z.zone_status }}">
+                          <input type="hidden" name="source_name" value="{{ z.source_name }}">
+                          <button class="btn btn-sm btn-outline-sz">Edit</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin.delete_hazard_zone_route', hazard_zone_id=z.hazard_zone_id) }}" style="display:inline;" onsubmit="return confirm('Delete this hazard zone?')">
+                          <button class="btn btn-sm btn-danger-sz">Delete</button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% else %}
+                    <tr><td colspan="5" class="text-center text-muted p-3">No hazard zones.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Use tojson filter for safe JavaScript string escaping
+const MAP_TILE_URL = document.querySelector('meta[name="map-tile-url"]').content;
+const MAP_ATTRIBUTION = document.querySelector('meta[name="map-attribution"]').content;
+let hmap, drawnLayer = null;
+
+function initHazardMap() {
+  const lat = parseFloat(document.querySelector('meta[name="default-lat"]').content);
+  const lon = parseFloat(document.querySelector('meta[name="default-lon"]').content);
+  hmap = L.map('hazardMap', { scrollWheelZoom: false }).setView([lat, lon], 13);
+  L.tileLayer(MAP_TILE_URL, { maxZoom:19, attribution: MAP_ATTRIBUTION }).addTo(hmap);
+  hmap.on('click', onMapClick);
+  hmap.on('dblclick', finishPolygon);
+}
+let polyPoints = [];
+let polyLayer = null;
+
+function onMapClick(e) {
+  polyPoints.push(e.latlng);
+  if (polyLayer) hmap.removeLayer(polyLayer);
+  if (polyPoints.length === 1) {
+    polyLayer = L.marker(e.latlng).addTo(hmap);
+  } else {
+    const latlngs = polyPoints.slice();
+    latlngs.push(polyPoints[0]);
+    polyLayer = L.polyline(latlngs, {color:'#B91C1C', weight:2, dashArray:'5,5'}).addTo(hmap);
+    polyPoints.forEach(p => L.circleMarker(p, {radius:4, color:'#B91C1C'}).addTo(hmap));
+  }
+  updateGeoJSON();
+}
+
+function finishPolygon() {
+  if (polyPoints.length < 3) {
+    alert('Click at least 3 points to form a polygon.');
+    return;
+  }
+  // Close ring
+  const ring = polyPoints.map(p => [p.lng, p.lat]);
+  ring.push(ring[0]);
+  const geojson = {
+    type: 'Polygon',
+    coordinates: [ring]
+  };
+  document.getElementById('geojsonInput').value = JSON.stringify(geojson, null, 2);
+  alert('Polygon captured. GeoJSON copied to the text field above.');
+}
+
+function updateGeoJSON() {
+  if (polyPoints.length < 2) return;
+  const coords = polyPoints.map(p => [p.lng, p.lat]);
+  document.getElementById('geojsonInput').value = JSON.stringify({
+    type:'Polygon', coordinates:[coords.concat([coords[0]])]
+  }, null, 2);
+}
+
+document.addEventListener('DOMContentLoaded', initHazardMap);
+</script>
+{% endblock %}

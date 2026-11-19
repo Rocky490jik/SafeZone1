@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}How it works - SafeZone{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <div class="section-title-center">
+      <h2>How SafeZone works</h2>
+      <p class="text-muted">Three simple steps to find a safe place near you.</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card card-sz h-100 text-center p-4">
+          <div class="step-number" style="margin:0 auto;">&#9733;</div>
+          <h4>1. Sign in</h4>
+          <p class="text-muted">Create an account or sign in. Your role determines what you can do &mdash; user or administrator.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-sz h-100 text-center p-4">
+          <div class="step-number" style="margin:0 auto;">&#9733;</div>
+          <h4>2. Find shelters</h4>
+          <p class="text-muted">Share your location or enter it manually. Browse verified shelters on the map or in a list, filtered by status and facilities.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card card-sz h-100 text-center p-4">
+          <div class="step-number" style="margin:0 auto;">&#9733;</div>
+          <h4>3. Get a route</h4>
+          <p class="text-muted">Request a road route to a shelter. It&rsquo;s checked against recorded hazard zones so you&rsquo;re warned of affected areas.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-sm" style="background:#fff;">
+  <div class="container">
+    <div class="sz-panel">
+      <h3>Roles &amp; permissions</h3>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <h5 class="text-teal">Registered user</h5>
+          <ul class="list-unstyled small">
+            <li>&#10003; View dashboard, alerts and emergency contacts</li>
+            <li>&#10003; Share or enter a location</li>
+            <li>&#10003; Search, filter and view shelter details</li>
+            <li>&#10003; Request routes with hazard checks</li>
+            <li class="text-danger">&#10007; Cannot create shelters or publish alerts</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <h5 class="text-teal">Administrator</h5>
+          <ul class="list-unstyled small">
+            <li>&#10003; Create, edit, verify and deactivate shelters</li>
+            <li>&#10003; Draw and manage hazard polygons</li>
+            <li>&#10003; Draft, publish and expire alerts</li>
+            <li>&#10003; Manage emergency contacts and review audit log</li>
+            <li class="text-danger">&#10007; Cannot bypass authentication</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

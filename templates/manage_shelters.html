@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Manage shelters - SafeZone Admin{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h2 class="mb-0">Manage shelters</h2>
+        <p class="text-muted small mb-0">Add, edit, verify and deactivate shelter records.</p>
+      </div>
+      <a class="btn btn-sz" href="{{ url_for('admin.add_shelter') }}">&#x2795; Add new shelter</a>
+    </div>
+
+    <div class="card card-sz">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table-sz mb-0">
+            <thead>
+              <tr>
+                <th>Code</th><th>Name</th><th>Type</th><th>Status</th><th>Verification</th><th>Capacity</th><th>City</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in shelters %}
+                <tr>
+                  <td><code class="small">{{ s.shelter_code }}</code></td>
+                  <td><strong>{{ s.name }}</strong></td>
+                  <td><span class="badge bg-light text-dark border">{{ s.shelter_type }}</span></td>
+                  <td><span class="badge badge-{{ 'open' if s.status=='OPEN' else 'full' if s.status=='FULL' else 'closed' }}">{{ s.status }}</span></td>
+                  <td><span class="badge badge-{{ 'verified' if s.verification_status=='VERIFIED' else 'pending' if s.verification_status=='PENDING' else 'rejected' }}">{{ s.verification_status }}</span></td>
+                  <td>{{ s.available_capacity }} / {{ s.total_capacity }}</td>
+                  <td>{{ s.city }}</td>
+                  <td>
+                    <a class="btn btn-sm btn-outline-sz" href="{{ url_for('admin.edit_shelter', shelter_id=s.shelter_id) }}">Edit</a>
+                    <form method="POST" action="{{ url_for('admin.delete_shelter_route', shelter_id=s.shelter_id) }}" style="display:inline;" onsubmit="return confirm('Delete this shelter record?')">
+                      <button class="btn btn-sm btn-danger-sz">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="8" class="text-center text-muted p-3">No shelters found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

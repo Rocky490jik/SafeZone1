@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Manage disasters - SafeZone Admin{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Manage disaster events</h2>
+
+    <div class="card card-sz mb-3">
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.add_disaster') }}" class="row g-2 align-items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="col-md-2"><input type="text" name="event_code" class="form-control" placeholder="Event code" required></div>
+          <div class="col-md-3"><input type="text" name="title" class="form-control" placeholder="Title" required></div>
+          <div class="col-md-2">
+            <select name="disaster_type" class="form-select">
+              <option>FLOOD</option><option>FIRE</option><option>EARTHQUAKE</option>
+              <option>LANDSLIDE</option><option>CYCLONE</option><option>STORM</option><option>OTHER</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <select name="severity" class="form-select">
+              <option>LOW</option><option>MODERATE</option><option>HIGH</option><option>CRITICAL</option>
+            </select>
+          </div>
+          <div class="col-md-3"><input type="text" name="affected_area" class="form-control" placeholder="Affected area"></div>
+          <div class="col-md-2"><button class="btn btn-sz w-100" type="submit">Add event</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card card-sz">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table-sz mb-0">
+            <thead>
+              <tr><th>Code</th><th>Title</th><th>Type</th><th>Severity</th><th>Status</th><th>Area</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for d in disasters %}
+                <tr>
+                  <td><code>{{ d.event_code }}</code></td>
+                  <td>{{ d.title }}</td>
+                  <td><span class="badge bg-light text-dark border">{{ d.disaster_type }}</span></td>
+                  <td><span class="badge badge-{{ d.severity.lower() }}">{{ d.severity }}</span></td>
+                  <td><span class="badge badge-{{ 'open' if d.event_status=='ACTIVE' else 'closed' }}">{{ d.event_status }}</span></td>
+                  <td class="small text-muted">{{ d.affected_area }}</td>
+                  <td>
+                    <form method="POST" action="{{ url_for('admin.edit_disaster', disaster_id=d.disaster_id) }}" style="display:inline;">
+                      <input type="hidden" name="title" value="{{ d.title }}">
+                      <input type="hidden" name="disaster_type" value="{{ d.disaster_type }}">
+                      <input type="hidden" name="severity" value="{{ d.severity }}">
+                      <input type="hidden" name="description" value="{{ d.description }}">
+                      <input type="hidden" name="affected_area" value="{{ d.affected_area }}">
+                      <input type="hidden" name="source_name" value="{{ d.source_name }}">
+                      <input type="hidden" name="source_url" value="{{ d.source_url }}">
+                      <input type="hidden" name="event_status" value="{{ d.event_status }}">
+                      <input type="hidden" name="starts_at" value="{{ d.starts_at }}">
+                      <input type="hidden" name="ends_at" value="{{ d.ends_at }}">
+                      <button class="btn btn-sm btn-outline-sz">Edit</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.delete_disaster_route', disaster_id=d.disaster_id) }}" style="display:inline;" onsubmit="return confirm('Delete this disaster event?')">
+                      <button class="btn btn-sm btn-danger-sz">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" class="text-center text-muted p-3">No disaster events.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

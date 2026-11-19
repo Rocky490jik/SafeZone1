@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SafeZone - Disaster Safe Shelter Locator{% endblock %}</title>
+  <meta name="description" content="Find nearby verified disaster shelters, view alerts, and check hazard-aware routes.">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="map-tile-url" content="{{ config.MAP_TILE_URL|safe }}">
+  <meta name="map-attribution" content="{{ config.MAP_ATTRIBUTION|safe }}">
+  <meta name="default-lat" content="{{ config.DEFAULT_LAT|safe }}">
+  <meta name="default-lon" content="{{ config.DEFAULT_LON|safe }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#9733;</text></svg>">
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Leaflet CSS (local with CDN fallback) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg sz-navbar">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('index') }}">
+        <span class="brand-mark">&#9733;</span> SafeZone
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#szNavbar"
+              aria-controls="szNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="szNavbar">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          {% if current_user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('user.dashboard') }}">Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('user.find_shelter') }}">Find Shelters</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('user.alerts') }}">Alerts</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('user.emergency_contacts') }}">Emergency Contacts</a></li>
+            {% if current_user.is_admin %}
+              <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.dashboard') }}">Admin</a></li>
+            {% endif %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('user.profile') }}">Profile</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('about') }}">How it works</a></li>
+          {% endif %}
+        </ul>
+        <div class="d-flex gap-2">
+          {% if current_user.is_authenticated %}
+            <a class="btn btn-sm btn-outline-sz" href="{{ url_for('auth.logout') }}">Sign out</a>
+          {% else %}
+            <a class="btn btn-sm btn-outline-sz" href="{{ url_for('auth.login') }}">Sign in</a>
+            <a class="btn btn-sm btn-sz" href="{{ url_for('auth.register') }}">Create account</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash messages -->
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container my-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category=='success' else 'danger' if category=='danger' else 'info' if category=='info' else 'warning' }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Page content -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <h6>SafeZone</h6>
+          <p class="small" style="color: rgba(255,255,255,0.7);">
+            Disaster Safe Shelter Locator &mdash; a calm, clear, ready interface for finding
+            registered emergency shelters and viewing administrator-published alerts.
+          </p>
+        </div>
+        <div class="col-md-4 mb-3">
+          <h6>Quick links</h6>
+          <ul class="list-unstyled small">
+            <li><a href="{{ url_for('about') }}">How it works</a></li>
+            <li><a href="{{ url_for('index') }}">Find a shelter</a></li>
+            <li><a href="{{ url_for('user.emergency_contacts') }}">Emergency contacts</a></li>
+          </ul>
+        </div>
+        <div class="col-md-4 mb-3">
+          <h6>Stay safe</h6>
+          <p class="small disclaimer">
+            {{ disclaimer }}
+          </p>
+        </div>
+      </div>
+      <div class="border-top border-secondary mt-4 pt-2 small" style="color: rgba(255,255,255,0.55);">
+        &copy; 2026 SafeZone. Student project prototype &mdash; not a certified emergency system.
+        Map data &#169; OpenStreetMap contributors.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Leaflet JS (local with CDN fallback) -->
+  <script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Page scripts -->
+  {% block scripts %}{% endblock %}
+</body>
+</html>

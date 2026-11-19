@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Active Alerts - SafeZone{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Active alerts</h2>
+    <p class="text-muted text-center mb-4">
+      Published administrator alerts. Expired or draft alerts are not shown here.
+    </p>
+
+    {% if alerts %}
+      <div class="row g-3">
+        {% for a in alerts %}
+          <div class="col-md-6 col-lg-4">
+            <div class="alert-card {{ a.severity.lower() }}">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="mb-0">{{ a.title }}</h6>
+                  <span class="badge badge-{{ a.severity.lower() }}">{{ a.severity.title() }}</span>
+                </div>
+                <p class="small mb-2">{{ a.area_text }}</p>
+                <p class="mb-2">{{ a.message }}</p>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                  <span class="badge bg-light text-dark border"><small>&#128197; {{ a.source_name }}</small></span>
+                  {% if a.published_at %}
+                    <span class="badge bg-light text-dark border"><small>&#128337; {{ a.published_at }}</small></span>
+                  {% endif %}
+                  {% if a.expires_at %}
+                    <span class="badge bg-light text-dark border"><small>&#128198; Expires {{ a.expires_at }}</small></span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <div class="text-muted" style="font-size:3rem;">&#9940;</div>
+        <h4>No active alerts</h4>
+        <p class="text-muted">There are no published, unexpired alerts at the moment.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

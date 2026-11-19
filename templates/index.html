@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Home - SafeZone{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>Find safety, faster.</h1>
+    <p class="lead">
+      SafeZone helps you locate registered emergency shelters near you, check their
+      availability and facilities, and view a hazard-aware route &mdash; all in one
+      clear, mobile-friendly interface.
+    </p>
+    <div class="cta-row">
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-hero" href="{{ url_for('user.find_shelter') }}">Find a Shelter Near Me</a>
+        <a class="btn btn-hero-outline" href="{{ url_for('user.alerts') }}">View Active Alerts</a>
+      {% else %}
+        <a class="btn btn-hero" href="{{ url_for('auth.register') }}">Get Started &rarr;</a>
+        <a class="btn btn-hero-outline" href="{{ url_for('auth.login') }}">Sign in</a>
+      {% endif %}
+    </div>
+    <div class="mt-4 small" style="color: rgba(255,255,255,0.8); max-width: 650px; margin: 0 auto;">
+      {{ disclaimer }}
+    </div>
+  </div>
+</section>
+
+<section class="section-sm">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-md-4 step">
+        <div class="step-number">1</div>
+        <h4>Share your location</h4>
+        <p>Allow browser location access or enter a location manually. We never store your precise coordinates.</p>
+      </div>
+      <div class="col-md-4 step">
+        <div class="step-number">2</div>
+        <h4>Find nearby shelters</h4>
+        <p>See verified shelters on a map and list, with distance, capacity and facilities.</p>
+      </div>
+      <div class="col-md-4 step">
+        <div class="step-number">3</div>
+        <h4>Check the route</h4>
+        <p>Get a road route and be warned if it crosses a recorded hazard zone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section-sm" style="background: #ffffff;">
+  <div class="container">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-6">
+        <h2 class="section-title-center">What you&rsquo;ll see</h2>
+        <ul class="list-unstyled">
+          <li class="mb-3 d-flex align-items-start gap-3">
+            <span class="badge bg-teal rounded-pill">&#10003;</span>
+            <div><strong>Verified shelters only.</strong> Pending records are labelled clearly.</div>
+          </li>
+          <li class="mb-3 d-flex align-items-start gap-3">
+            <span class="badge bg-teal rounded-pill">&#10003;</span>
+            <div><strong>Capacity &amp; facilities.</strong> Food, water, medical support and accessibility.</div>
+          </li>
+          <li class="mb-3 d-flex align-items-start gap-3">
+            <span class="badge bg-teal rounded-pill">&#10003;</span>
+            <div><strong>Hazard-aware routing.</strong> Routes are checked against mapped hazard zones.</div>
+          </li>
+          <li class="mb-3 d-flex align-items-start gap-3">
+            <span class="badge bg-teal rounded-pill">&#10003;</span>
+            <div><strong>Admin-managed.</strong> Verified by administrators with a full audit trail.</div>
+          </li>
+        </ul>
+      </div>
+      <div class="col-lg-6">
+        <div class="sz-panel">
+          <h4 class="mb-3">Live snapshot (demo data)</h4>
+          {% if shelters %}
+            <div class="row g-3">
+              {% for s in shelters %}
+                <div class="col-6 col-md-4">
+                  <div class="card card-sz h-100" style="border-left: 4px solid var(--sz-teal);">
+                    <div class="card-body p-3">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-1">{{ s.name }}</h6>
+                        <span class="badge badge-{{ 'open' if s.status=='OPEN' else 'full' if s.status=='FULL' else 'closed' }}">{{ s.status }}</span>
+                      </div>
+                      <div class="small text-muted">{{ s.address }}, {{ s.city }}</div>
+                      <div class="mt-2 small"><strong>{{ s.available_capacity }}</strong> / {{ s.total_capacity }} places</div>
+                      <div class="small mt-1">Verified: {{ 'Yes' if s.verification_status=='VERIFIED' else 'Pending' }}</div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted small">No demo shelters available right now.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-title-center">
+      <h2>Important notice</h2>
+      <p class="text-muted">SafeZone is an informational student prototype. It is not a certified emergency response or life-safety system.</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card card-sz bg-amber">
+          <div class="card-body">
+            <h5 class="card-title text-amber">&#9888; Not a real alert system</h5>
+            <p class="card-text small">All shelter names, coordinates, hazard zones and contacts in this demo are fictional. Do not use them for emergency decisions. Replace with verified local data before any real use.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card card-sz bg-red">
+          <div class="card-body">
+            <h5 class="card-title text-red">&#9940; Follow official instructions</h5>
+            <p class="card-text small">Shelter availability, map data and hazard information may be incomplete, delayed or incorrect. Always follow official emergency instructions and local authorities.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

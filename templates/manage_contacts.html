@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency contacts - SafeZone Admin{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Manage emergency contacts</h2>
+
+    <div class="card card-sz mb-3">
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.add_contact') }}" class="row g-2 align-items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="col-md-3"><input type="text" name="agency_name" class="form-control" placeholder="Agency name" required></div>
+          <div class="col-md-2"><input type="text" name="category" class="form-control" placeholder="EMERGENCY" required></div>
+          <div class="col-md-3"><input type="tel" name="phone" class="form-control" placeholder="Phone" required></div>
+          <div class="col-md-2"><input type="text" name="area_text" class="form-control" placeholder="Area"></div>
+          <div class="col-md-1">
+            <div class="form-check mt-6"><input class="form-check-input" type="checkbox" name="is_verified" value="1"> Verified</div>
+          </div>
+          <div class="col-md-1"><button class="btn btn-sz w-100" type="submit">Add</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card card-sz">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table-sz mb-0">
+            <thead>
+              <tr><th>Agency</th><th>Category</th><th>Phone</th><th>Area</th><th>Verified</th><th>Active</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for c in contacts %}
+                <tr>
+                  <td><strong>{{ c.agency_name }}</strong></td>
+                  <td>{{ c.category }}</td>
+                  <td><a href="tel:{{ c.phone }}">{{ c.phone }}</a></td>
+                  <td class="small text-muted">{{ c.area_text }}</td>
+                  <td><span class="badge badge-{{ 'verified' if c.is_verified else 'pending' }}">{{ 'Yes' if c.is_verified else 'No' }}</span></td>
+                  <td><span class="badge badge-{{ 'open' if c.is_active else 'closed' }}">{{ 'Yes' if c.is_active else 'No' }}</span></td>
+                  <td>
+                    <form method="POST" action="{{ url_for('admin.edit_contact', contact_id=c.contact_id) }}" style="display:inline;">
+                      <input type="hidden" name="agency_name" value="{{ c.agency_name }}">
+                      <input type="hidden" name="category" value="{{ c.category }}">
+                      <input type="hidden" name="phone" value="{{ c.phone }}">
+                      <input type="hidden" name="area_text" value="{{ c.area_text }}">
+                      <input type="hidden" name="source_name" value="{{ c.source_name }}">
+                      <input type="hidden" name="is_verified" value="{{ '1' if c.is_verified else '' }}">
+                      <input type="hidden" name="is_active" value="{{ '1' if c.is_active else '' }}">
+                      <button class="btn btn-sm btn-outline-sz">Edit</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.delete_contact_route', contact_id=c.contact_id) }}" style="display:inline;" onsubmit="return confirm('Delete this contact?')">
+                      <button class="btn btn-sm btn-danger-sz">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" class="text-center text-muted p-3">No contacts.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

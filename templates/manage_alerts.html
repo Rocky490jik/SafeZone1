@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Manage alerts - SafeZone Admin{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Manage alerts</h2>
+
+    <div class="card card-sz mb-3">
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.add_alert') }}" class="row g-2 align-items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="col-md-3"><input type="text" name="title" class="form-control" placeholder="Alert title" required></div>
+          <div class="col-md-4"><input type="text" name="message" class="form-control" placeholder="Message" required></div>
+          <div class="col-md-2">
+            <select name="severity" class="form-select">
+              <option>INFO</option><option>LOW</option><option>MODERATE</option><option>HIGH</option><option>CRITICAL</option>
+            </select>
+          </div>
+          <div class="col-md-3"><input type="text" name="area_text" class="form-control" placeholder="Affected area"></div>
+          <div class="col-md-2"><input type="text" name="source_name" class="form-control" value="ADMIN"></div>
+          <div class="col-md-2"><input type="datetime-local" name="expires_at" class="form-control"></div>
+          <div class="col-md-2"><button class="btn btn-sz w-100" type="submit">Publish alert</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card card-sz">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table-sz mb-0">
+            <thead>
+              <tr><th>Title</th><th>Severity</th><th>Status</th><th>Area</th><th>Source</th><th>Expires</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for a in alerts %}
+                <tr>
+                  <td>{{ a.title }}</td>
+                  <td><span class="badge badge-{{ a.severity.lower() }}">{{ a.severity }}</span></td>
+                  <td><span class="badge badge-{{ 'open' if a.alert_status=='PUBLISHED' else 'closed' }}">{{ a.alert_status }}</span></td>
+                  <td class="small text-muted">{{ a.area_text }}</td>
+                  <td class="small">{{ a.source_name }}</td>
+                  <td class="small">{{ a.expires_at or '&mdash;' }}</td>
+                  <td>
+                    <form method="POST" action="{{ url_for('admin.edit_alert', alert_id=a.alert_id) }}" style="display:inline;">
+                      <input type="hidden" name="title" value="{{ a.title }}">
+                      <input type="hidden" name="message" value="{{ a.message }}">
+                      <input type="hidden" name="severity" value="{{ a.severity }}">
+                      <input type="hidden" name="area_text" value="{{ a.area_text }}">
+                      <input type="hidden" name="source_name" value="{{ a.source_name }}">
+                      <input type="hidden" name="alert_status" value="{{ a.alert_status }}">
+                      <input type="hidden" name="published_at" value="{{ a.published_at }}">
+                      <input type="hidden" name="expires_at" value="{{ a.expires_at }}">
+                      <button class="btn btn-sm btn-outline-sz">Edit</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.delete_alert_route', alert_id=a.alert_id) }}" style="display:inline;" onsubmit="return confirm('Delete this alert?')">
+                      <button class="btn btn-sm btn-danger-sz">Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" class="text-center text-muted p-3">No alerts.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

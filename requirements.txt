@@ -1,0 +1,16 @@
+# SafeZone - Disaster Safe Shelter Locator
+# Python and Flask web application (per PRD)
+
+Flask==2.2.5
+Flask-Login==0.6.3
+Flask-WTF==1.1.1
+WTForms==3.0.1
+python-dotenv==0.21.1
+requests==2.31.0
+Werkzeug==2.2.3
+Jinja2==3.1.4
+
+# Optional (per PRD): MySQL connector & Shapely if switching to MySQL.
+# Uncomment when a MySQL server is available:
+# mysql-connector-python==8.2.0
+# Shapely==2.0.2

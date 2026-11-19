@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Contacts - SafeZone{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Emergency contacts</h2>
+    <p class="text-muted text-center mb-4">
+      Administrator-entered emergency contacts. Replace demo numbers with verified local authorities.
+    </p>
+
+    {% if contacts %}
+      <div class="row g-3">
+        {% for c in contacts %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card card-sz h-100">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <h6 class="mb-0">{{ c.agency_name }}</h6>
+                  <span class="badge badge-{{ 'verified' if c.is_verified else 'pending' }}">{{ c.category }}</span>
+                </div>
+                {% if c.area_text %}<p class="small text-muted mb-2">{{ c.area_text }}</p>{% endif %}
+                <a href="tel:{{ c.phone }}" class="btn btn-sz btn-sm mt-auto">&#9742; {{ c.phone }}</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <p class="text-muted">No emergency contacts recorded yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

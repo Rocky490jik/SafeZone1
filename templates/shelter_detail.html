@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}{{ shelter.name }} - SafeZone{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <a class="btn btn-ghost mb-3" href="{{ url_for('user.find_shelter') }}">&#8592; Back to shelters</a>
+
+    <div class="row g-4">
+      <!-- Shelter info -->
+      <div class="col-lg-5">
+        <div class="card card-sz">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ shelter.name }}</h5>
+            <span class="badge badge-{{ 'verified' if shelter.verification_status=='VERIFIED' else 'pending' if shelter.verification_status=='PENDING' else 'rejected' }}">
+              {{ shelter.verification_status.title() }}
+            </span>
+          </div>
+          <div class="card-body p-4">
+            <div class="mb-3">
+              <span class="badge badge-{{ 'open' if shelter.status=='OPEN' else 'full' if shelter.status=='FULL' else 'closed' }} fs-6">
+                {{ shelter.status }}
+              </span>
+            </div>
+            <p class="mb-3">{{ shelter.description or 'No description available.' }}</p>
+
+            <div class="mb-3">
+              <h6 class="text-navy">Capacity</h6>
+              <div class="d-flex gap-3">
+                <div class="text-center">
+                  <div class="fw-bold fs-5">{{ shelter.available_capacity }}</div>
+                  <div class="small text-muted">Available</div>
+                </div>
+                <div class="text-center">
+                  <div class="fw-bold fs-5">{{ shelter.total_capacity }}</div>
+                  <div class="small text-muted">Total</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <h6 class="text-navy">Location</h6>
+              <p class="small mb-1">{{ shelter.address }}</p>
+              <p class="small mb-1">{{ shelter.city }}, {{ shelter.state }} {{ shelter.postal_code }}</p>
+              <p class="small text-muted">&#128205; {{ "%.4f"|format(shelter.latitude) }}, {{ "%.4f"|format(shelter.longitude) }}</p>
+            </div>
+
+            <div class="mb-3">
+              <h6 class="text-navy">Contact</h6>
+              <p class="small mb-1">{{ shelter.contact_name or 'Not available' }}</p>
+              <p class="small mb-0">{{ shelter.contact_phone or 'Not available' }}</p>
+            </div>
+
+            <div class="mb-3">
+              <h6 class="text-navy">Facilities</h6>
+              <div class="d-flex gap-2 flex-wrap">
+                {% if shelter.facilities.food %}
+                  <span class="facility-chip">&#x1F371; Food</span>
+                {% endif %}
+                {% if shelter.facilities.water %}
+                  <span class="facility-chip">&#x1F4A7; Drinking water</span>
+                {% endif %}
+                {% if shelter.facilities.medical %}
+                  <span class="facility-chip">&#x1F3E5; Medical support</span>
+                {% endif %}
+                {% if shelter.facilities.accessibility %}
+                  <span class="facility-chip">&#x1F9BC; Accessibility</span>
+                {% endif %}
+                {% if not (shelter.facilities.food or shelter.facilities.water or shelter.facilities.medical or shelter.facilities.accessibility) %}
+                  <span class="badge bg-secondary">None recorded</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <h6 class="text-navy">Verification</h6>
+              <p class="small text-muted mb-0">
+                Last verified: {{ shelter.last_verified_at or 'Not yet verified' }}
+              </p>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-end">
+              <a class="btn btn-outline-sz" href="{{ url_for('user.find_shelter') }}">Back</a>
+              <button class="btn btn-sz" onclick="requestRoute({{ shelter.shelter_id }}, '{{ shelter.name|e }}', {{ shelter.latitude }}, {{ shelter.longitude }})">
+                &#9654; Get route to this shelter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="col-lg-7">
+        <div class="card card-sz h-100">
+          <div class="card-header">
+            Shelter location
+          </div>
+          <div class="card-body p-0" style="height:430px;">
+            <div id="map" style="height:100%; width:100%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Route result area -->
+    <div id="routeResult" class="mt-4"></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Read map config from meta tags (avoids Jinja2 HTML-escaping issues)
+const MAP_TILE_URL = document.querySelector('meta[name="map-tile-url"]').content;
+const MAP_ATTRIBUTION = document.querySelector('meta[name="map-attribution"]').content;
+const SHELTER_LAT = {{ shelter.latitude|tojson }};
+const SHELTER_LON = {{ shelter.longitude|tojson }};
+
+let map = null;
+let routeLayer = null;
+
+// Define requestRoute FIRST so it's always available globally
+async function getCurrentLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation not supported'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      err => reject(new Error('Could not get current location: ' + err.message)),
+      { timeout: 10000, enableHighAccuracy: true, maximumAge: 0 }
+    );
+  });
+}
+
+async function requestRoute(id, name, lat, lon) {
+  const result = document.getElementById('routeResult');
+  if (!result) return;
+  result.innerHTML = `
+    <div class="card card-sz">
+      <div class="route-header">Route to <strong>${escapeHtml(name)}</strong></div>
+      <div class="route-body" style="min-height:260px;">
+        <div class="text-center text-muted py-4">Getting your location & computing route...</div>
+      </div>
+    </div>`;
+  function csrfHeaders() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta ? meta.getAttribute('content') : '';
+    return { 'X-CSRFToken': token, 'Content-Type': 'application/json' };
+  }
+
+  try {
+    // Get user's current location from browser
+    let userLat, userLon;
+    try {
+      const pos = await getCurrentLocation();
+      userLat = pos.lat;
+      userLon = pos.lon;
+    } catch (e) {
+      console.warn('Could not get current location, using shelter location as fallback:', e);
+      userLat = lat;
+      userLon = lon;
+    }
+
+    const res = await fetch('/user/route', {
+      method: 'POST',
+      headers: csrfHeaders(),
+      body: JSON.stringify({shelter_id: id, lat: userLat, lon: userLon})
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Route failed');
+    if (routeLayer && map) map.removeLayer(routeLayer);
+    const latLngs = data.route.geometry.map(c => [c[1], c[0]]);
+    if (map) {
+      routeLayer = L.polyline(latLngs, {color:'#0F766E', weight:4, opacity:0.8, dashArray:'6,10'}).addTo(map);
+      map.fitBounds(routeLayer.getBounds().pad(0.2));
+    }
+    const hc = data.hazard_check;
+    const unsafe = !hc.safe;
+    result.innerHTML = `
+      <div class="card card-sz">
+        <div class="route-header">Route to <strong>${escapeHtml(name)}</strong></div>
+        <div class="route-body">
+          <div class="hazard-warning ${unsafe ? 'unsafe' : 'safe'}">
+            <span class="icon">${unsafe ? '&#9888;' : '&#10003;'}</span>
+            ${unsafe ? 'This route crosses recorded hazard zones.' : 'Route avoids recorded hazard zones.'}
+            <span class="ms-2 small" style="opacity:0.8;">Not a real-world safety guarantee.</span>
+          </div>
+          <div class="route-meta mt-2">
+            <div class="item"><div class="label">Distance</div><div class="value">${data.route.distance_km} km</div></div>
+            <div class="item"><div class="label">Est. time</div><div class="value">${data.route.duration_min} min</div></div>
+            <div class="item"><div class="label">Status</div><div class="value">${data.shelter.status}</div></div>
+            <div class="item"><div class="label">Capacity</div><div class="value">${data.shelter.available_capacity} / ${data.shelter.total_capacity}</div></div>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) {
+    result.innerHTML = `<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function escapeHtml(t) { return String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// Initialize map with error handling
+function initMap() {
+  try {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+      console.error('Map container not found');
+      return;
+    }
+    // Check if container is visible and has dimensions
+    if (mapContainer.offsetWidth === 0 || mapContainer.offsetHeight === 0) {
+      console.warn('Map container has zero dimensions, retrying...');
+      setTimeout(initMap, 200);
+      return;
+    }
+
+    map = L.map('map', { scrollWheelZoom: false }).setView([SHELTER_LAT, SHELTER_LON], 14);
+    var tileLayer = L.tileLayer(MAP_TILE_URL, {
+      maxZoom: 19,
+      attribution: MAP_ATTRIBUTION
+    }).addTo(map);
+
+    tileLayer.on('tileerror', function(err, tile) {
+      console.warn('Tile load error:', tile.src);
+    });
+
+    // Force Leaflet to measure container and redraw tiles
+    setTimeout(function() { if (map) map.invalidateSize(); }, 100);
+    setTimeout(function() { if (map) map.invalidateSize(); }, 500);
+    window.addEventListener('resize', function() { if (map) map.invalidateSize(); });
+
+    L.marker([SHELTER_LAT, SHELTER_LON], {
+      icon: L.divIcon({
+        className: 'custom-div-icon',
+        html: `<div style="background:#0F766E;width:16px;height:16px;border-radius:50%;border:2px solid #fff;"></div>`,
+        iconSize:[16,16], iconAnchor:[8,8], popupAnchor:[0,-10]
+      })
+    }).addTo(map).bindPopup('<b>{{ shelter.name|tojson|safe }}</b>').openPopup();
+  } catch (e) {
+    console.error('Map initialization failed:', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Manage users - SafeZone Admin{% endblock %}
+
+{% block content %}
+<section class="section-sm">
+  <div class="container">
+    <h2 class="section-title-center">Manage users</h2>
+
+    <div class="card card-sz">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table-sz mb-0">
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {% for u in users %}
+                <tr>
+                  <td>{{ u.full_name }}</td>
+                  <td>{{ u.email }}</td>
+                  <td>
+                    <form method="POST" action="{{ url_for('admin.set_user_role', user_id=u.user_id) }}" style="display:inline;">
+                      <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="USER" {% if u.role=='USER' %}selected{% endif %}>User</option>
+                        <option value="ADMIN" {% if u.role=='ADMIN' %}selected{% endif %}>Admin</option>
+                      </select>
+                    </form>
+                  </td>
+                  <td><span class="badge badge-{{ 'open' if u.is_active else 'closed' }}">{{ 'Active' if u.is_active else 'Deactivated' }}</span></td>
+                  <td class="small">{{ u.created_at }}</td>
+                  <td>
+                    {% if not u.is_active %}
+                      <form method="POST" action="{{ url_for('admin.deactivate_user_route', user_id=u.user_id) }}" style="display:inline;" onsubmit="return confirm('Activate this account?')">
+                        <button class="btn btn-sm btn-sz">Activate</button>
+                      </form>
+                    {% elif u.user_id != current_user.id %}
+                      <form method="POST" action="{{ url_for('admin.deactivate_user_route', user_id=u.user_id) }}" style="display:inline;" onsubmit="return confirm('Deactivate this account?')">
+                        <button class="btn btn-sm btn-danger-sz">Deactivate</button>
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td colspan="6" class="text-center text-muted p-3">No users.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
